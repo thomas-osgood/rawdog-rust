@@ -1,4 +1,7 @@
-use std::{io::Read, net::TcpStream};
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+};
 
 use crate::client::models::GeneralMetadata;
 
@@ -138,7 +141,36 @@ impl RawdogClient {
                 println!("MD: {:#?}", metadata);
                 println!("DATA: {:#?}", message);
 
-                let len_data: usize = message.len();
+                // get the metadata length and convert it to the
+                // BigEndian byte representation.
+                //
+                // TODO: serialize metadata to string, take the len
+                // and save it as a u16 in the len_md var.
+                let len_md: u16 = 8;
+                let md_size_bytes: [u8; SIZE_MD] = len_md.to_be_bytes();
+
+                // get the message length and convert it to the
+                // BigEndian byte representation.
+                let len_data: u64 = message.len() as u64;
+                let data_size_bytes: [u8; SIZE_DATA] = len_data.to_be_bytes();
+
+                // write metadata to the wire.
+                match conn.write_all(&md_size_bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("ERROR transmitting metadata size: {:?}", e);
+                        return None;
+                    }
+                };
+
+                // write payload size to the wire.
+                match conn.write_all(&data_size_bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("ERROR transmitting data size: {:?}", e);
+                        return None;
+                    }
+                }
 
                 println!("Message: {:?} bytes", len_data);
 
