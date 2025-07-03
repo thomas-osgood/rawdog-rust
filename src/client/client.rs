@@ -41,7 +41,7 @@ impl RawdogClient {
         let mut md_info: Vec<u8> = Vec::<u8>::new();
         let mut payload_info: Vec<u8> = Vec::<u8>::new();
 
-        match conn.read(&mut size_buffer) {
+        match conn.read_exact(&mut size_buffer) {
             Err(e) => return Err(e.into()),
             _ => {
                 let md_size_raw: [u8; SIZE_MD] = size_buffer[0..SIZE_MD].try_into().unwrap();
