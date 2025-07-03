@@ -44,10 +44,22 @@ impl RawdogClient {
         match conn.read_exact(&mut size_buffer) {
             Err(e) => return Err(e.into()),
             _ => {
-                let md_size_raw: [u8; SIZE_MD] = size_buffer[0..SIZE_MD].try_into().unwrap();
-                let data_size_raw: [u8; SIZE_DATA] = size_buffer[SIZE_MD..SIZE_MD + SIZE_DATA]
-                    .try_into()
-                    .unwrap();
+                let md_size_raw: [u8; SIZE_MD];
+                let data_size_raw: [u8; SIZE_DATA];
+
+                // assign the first two bytes of the data read
+                // to the "md_size_raw" variable.
+                match size_buffer[0..SIZE_MD].try_into() {
+                    Ok(bytes_read) => md_size_raw = bytes_read,
+                    Err(e) => return Err(e.into()),
+                }
+
+                // assign the next eight bytes of the data read
+                // to the "data_size_raw" variable.
+                match size_buffer[SIZE_MD..SIZE_MD + SIZE_DATA].try_into() {
+                    Ok(bytes_read) => data_size_raw = bytes_read,
+                    Err(e) => return Err(e.into()),
+                }
 
                 // DEBUG ONLY: DELETE AFTER TESTING.
                 println!("md_size_raw: {:?}", md_size_raw.to_vec());
