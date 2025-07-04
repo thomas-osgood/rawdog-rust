@@ -5,8 +5,15 @@ use serde::{Deserialize, Serialize};
 /// that is expected when making a request to a Rawdog Server.
 pub struct GeneralMetadata {
     pub endpoint: i64,
-    pub agent_name: String,
-    pub addl_data: String,
+    pub agentname: String,
+    pub addldata: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
+pub struct TcpHeader {
+    pub agentname: String,
+    pub endpoint: i64,
+    pub addldata: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
