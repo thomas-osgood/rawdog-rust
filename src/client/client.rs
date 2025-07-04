@@ -188,9 +188,6 @@ impl RawdogClient {
             }
         }
 
-        // TODO: create metadata and data byte arrays and use
-        // them to read the remaining transmission.
-
         return Ok((md, payload.message));
     }
 
