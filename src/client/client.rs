@@ -135,6 +135,9 @@ impl RawdogClient {
             }
         }
 
+        // only attempt to process the metadata if the
+        // length of its block is greater than zero; otherwise
+        // set it to a default instance of the struct.
         if md_info.len() > 0 {
             // convert the metadata bytes to a &str for
             // further processing.
@@ -153,6 +156,8 @@ impl RawdogClient {
             md = TcpHeader::default();
         }
 
+        // only attempt to process the payload if its length
+        // is greater than 0; otherwise, set it to an empty string.
         if payload_info.len() > 0 {
             // convert the payload Vec<u8> to a &str so it can be processed.
             let str_payload: &str;
