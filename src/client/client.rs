@@ -31,6 +31,9 @@ impl Default for RawdogClient {
 }
 
 impl RawdogClient {
+    /// helper function designed to connect to the server and
+    /// return the connection object. if this fails, an error
+    /// will be returned.
     fn connect(&self) -> Result<TcpStream, std::io::Error> {
         let target: String = format!("{}:{}", self.servaddr, self.servport);
         TcpStream::connect(target)
