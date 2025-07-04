@@ -164,7 +164,7 @@ impl RawdogClient {
 
             // base64-decode the payload's str.
             let dec_payload: Vec<u8>;
-            match base64::engine::general_purpose::STANDARD_NO_PAD.decode(str_payload) {
+            match base64::engine::general_purpose::STANDARD.decode(str_payload) {
                 Ok(result) => dec_payload = result,
                 Err(e) => return Err(e.into()),
             }
