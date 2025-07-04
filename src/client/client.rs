@@ -134,58 +134,58 @@ impl RawdogClient {
                         Err(e) => return Err(e.into()),
                     }
                 }
-
-                if md_info.len() > 0 {
-                    let str_metadata: &str;
-                    match str::from_utf8(&md_info) {
-                        Ok(result) => str_metadata = result,
-                        Err(e) => return Err(e.into()),
-                    }
-
-                    match serde_json::from_str(str_metadata) {
-                        Ok(result) => md = result,
-                        Err(e) => return Err(e.into()),
-                    }
-                } else {
-                    md = TcpHeader::default();
-                }
-
-                if payload_info.len() > 0 {
-                    // convert the payload Vec<u8> to a &str so it can be processed.
-                    let str_payload: &str;
-                    match str::from_utf8(&payload_info) {
-                        Ok(result) => str_payload = result,
-                        Err(e) => return Err(e.into()),
-                    }
-
-                    // base64-decode the payload's str.
-                    let dec_payload: Vec<u8>;
-                    match base64::engine::general_purpose::STANDARD_NO_PAD.decode(str_payload) {
-                        Ok(result) => dec_payload = result,
-                        Err(e) => return Err(e.into()),
-                    }
-
-                    // convert the base64-decoded payload Vec<u8> to a &str.
-                    let dec_payload_str: &str;
-                    match str::from_utf8(&dec_payload) {
-                        Ok(result) => dec_payload_str = result,
-                        Err(e) => return Err(e.into()),
-                    }
-
-                    // JSON deserialize the base64-decoded value to a TcpStatusMessage.
-                    match serde_json::from_str(dec_payload_str) {
-                        Ok(result) => payload = result,
-                        Err(e) => return Err(e.into()),
-                    }
-                } else {
-                    payload = TcpStatusMessage::default();
-                }
-
-                // if an error code has been returned by the server, raise an error.
-                if payload.code >= 400 {
-                    return Err(payload.message.into());
-                }
             }
+        }
+
+        if md_info.len() > 0 {
+            let str_metadata: &str;
+            match str::from_utf8(&md_info) {
+                Ok(result) => str_metadata = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            match serde_json::from_str(str_metadata) {
+                Ok(result) => md = result,
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            md = TcpHeader::default();
+        }
+
+        if payload_info.len() > 0 {
+            // convert the payload Vec<u8> to a &str so it can be processed.
+            let str_payload: &str;
+            match str::from_utf8(&payload_info) {
+                Ok(result) => str_payload = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            // base64-decode the payload's str.
+            let dec_payload: Vec<u8>;
+            match base64::engine::general_purpose::STANDARD_NO_PAD.decode(str_payload) {
+                Ok(result) => dec_payload = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            // convert the base64-decoded payload Vec<u8> to a &str.
+            let dec_payload_str: &str;
+            match str::from_utf8(&dec_payload) {
+                Ok(result) => dec_payload_str = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            // JSON deserialize the base64-decoded value to a TcpStatusMessage.
+            match serde_json::from_str(dec_payload_str) {
+                Ok(result) => payload = result,
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            payload = TcpStatusMessage::default();
+        }
+
+        // if an error code has been returned by the server, raise an error.
+        if payload.code >= 400 {
+            return Err(payload.message.into());
         }
 
         return Ok((md, payload.message));
