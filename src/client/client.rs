@@ -75,10 +75,6 @@ impl RawdogClient {
                     Err(e) => return Err(e.into()),
                 }
 
-                // DEBUG ONLY: DELETE AFTER TESTING.
-                println!("md_size_raw: {:?}", md_size_raw.to_vec());
-                println!("data_size_raw: {:?}", data_size_raw.to_vec());
-
                 // convert the metadata size bytes to an unsigned 16-bit int.
                 match u16::from_be_bytes(md_size_raw).try_into() {
                     Ok(md_size_res) => md_size = md_size_res,
