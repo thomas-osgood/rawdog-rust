@@ -202,6 +202,10 @@ impl RawdogClient {
 
     /// function designed to connect to the rawdog server
     /// and transmit a message and metadata.
+    ///
+    /// if everything goes as expected, this will return the
+    /// server's response to the client's transmission; otherwise
+    /// it will return an error.
     pub fn send(
         &self,
         metadata: GeneralMetadata,
