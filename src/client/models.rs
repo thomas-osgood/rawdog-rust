@@ -22,6 +22,8 @@ pub struct TcpStatusMessage {
     pub message: String,
 }
 
+/// implementation of the Default state for a
+/// TcpStatusMessage struct with custom values set.
 impl Default for TcpStatusMessage {
     fn default() -> Self {
         TcpStatusMessage {
