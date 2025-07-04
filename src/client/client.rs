@@ -3,6 +3,8 @@ use std::{
     net::TcpStream,
 };
 
+use base64::Engine;
+
 use crate::client::models::GeneralMetadata;
 
 const SIZE_BLOCK: usize = 1024;
@@ -141,11 +143,8 @@ impl RawdogClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         match self.connect() {
             Ok(mut conn) => {
-                println!("Successfully connected to server");
-                println!("MD: {:#?}", metadata);
-                println!("DATA: {:#?}", message);
-
                 let metadata_str: String;
+                let payload_enc: String = base64::engine::general_purpose::STANDARD.encode(message);
 
                 // JSON serialize the metadata passed in.
                 match serde_json::to_string(&metadata) {
@@ -163,7 +162,7 @@ impl RawdogClient {
 
                 // get the message length and convert it to the
                 // BigEndian byte representation.
-                let len_data: u64 = message.len() as u64;
+                let len_data: u64 = payload_enc.len() as u64;
                 let data_size_bytes: [u8; SIZE_DATA] = len_data.to_be_bytes();
 
                 // write metadata to the wire.
@@ -194,17 +193,13 @@ impl RawdogClient {
                 }
 
                 // transmit main payload.
-                //
-                // TODO: base64-encode the payload prior to transmission.
-                match conn.write_all(message.as_bytes()) {
+                match conn.write_all(payload_enc.as_bytes()) {
                     Ok(_) => {}
                     Err(e) => {
                         println!("ERROR transmitting payload: {:?}", e);
                         return Err(e.into());
                     }
                 }
-
-                println!("Message: {:?} bytes", len_data);
 
                 return Ok(());
             }
