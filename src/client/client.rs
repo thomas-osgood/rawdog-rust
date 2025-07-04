@@ -141,12 +141,20 @@ impl RawdogClient {
                 println!("MD: {:#?}", metadata);
                 println!("DATA: {:#?}", message);
 
+                let metadata_str: String;
+
+                // JSON serialize the metadata passed in.
+                match serde_json::to_string(&metadata) {
+                    Ok(serialized) => metadata_str = serialized,
+                    Err(e) => {
+                        println!("ERROR serializing metadata: {:?}", e);
+                        return None;
+                    }
+                }
+
                 // get the metadata length and convert it to the
                 // BigEndian byte representation.
-                //
-                // TODO: serialize metadata to string, take the len
-                // and save it as a u16 in the len_md var.
-                let len_md: u16 = 8;
+                let len_md: u16 = metadata_str.len() as u16;
                 let md_size_bytes: [u8; SIZE_MD] = len_md.to_be_bytes();
 
                 // get the message length and convert it to the
@@ -168,6 +176,15 @@ impl RawdogClient {
                     Ok(_) => {}
                     Err(e) => {
                         println!("ERROR transmitting data size: {:?}", e);
+                        return None;
+                    }
+                }
+
+                // transmit metadata chunk.
+                match conn.write_all(metadata_str.as_bytes()) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("ERROR transmitting metadata: {:?}", e);
                         return None;
                     }
                 }
