@@ -134,7 +134,11 @@ impl RawdogClient {
 
     /// function designed to connect to the rawdog server
     /// and transmit a message and metadata.
-    pub fn send(&self, metadata: GeneralMetadata, message: String) -> Option<String> {
+    pub fn send(
+        &self,
+        metadata: GeneralMetadata,
+        message: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match self.connect() {
             Ok(mut conn) => {
                 println!("Successfully connected to server");
@@ -148,7 +152,7 @@ impl RawdogClient {
                     Ok(serialized) => metadata_str = serialized,
                     Err(e) => {
                         println!("ERROR serializing metadata: {:?}", e);
-                        return None;
+                        return Err(e.into());
                     }
                 }
 
@@ -167,7 +171,7 @@ impl RawdogClient {
                     Ok(_) => {}
                     Err(e) => {
                         println!("ERROR transmitting metadata size: {:?}", e);
-                        return None;
+                        return Err(e.into());
                     }
                 };
 
@@ -176,7 +180,7 @@ impl RawdogClient {
                     Ok(_) => {}
                     Err(e) => {
                         println!("ERROR transmitting data size: {:?}", e);
-                        return None;
+                        return Err(e.into());
                     }
                 }
 
@@ -185,17 +189,28 @@ impl RawdogClient {
                     Ok(_) => {}
                     Err(e) => {
                         println!("ERROR transmitting metadata: {:?}", e);
-                        return None;
+                        return Err(e.into());
+                    }
+                }
+
+                // transmit main payload.
+                //
+                // TODO: base64-encode the payload prior to transmission.
+                match conn.write_all(message.as_bytes()) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("ERROR transmitting payload: {:?}", e);
+                        return Err(e.into());
                     }
                 }
 
                 println!("Message: {:?} bytes", len_data);
 
-                return None;
+                return Ok(());
             }
             Err(e) => {
                 println!("ERROR connecting to server - {:#?}", e);
-                return None;
+                return Err(e.into());
             }
         }
     }
