@@ -1,3 +1,4 @@
+use core::str;
 use std::{
     io::{Read, Write},
     net::TcpStream,
@@ -5,7 +6,7 @@ use std::{
 
 use base64::Engine;
 
-use crate::client::models::GeneralMetadata;
+use crate::client::models::{GeneralMetadata, TcpStatusMessage};
 
 const SIZE_BLOCK: usize = 1024;
 const SIZE_CHUNK: usize = 10;
@@ -48,6 +49,8 @@ impl RawdogClient {
 
         let mut md_info: Vec<u8> = Vec::<u8>::new();
         let mut payload_info: Vec<u8> = Vec::<u8>::new();
+
+        let payload: TcpStatusMessage;
 
         match conn.read_exact(&mut size_buffer) {
             Err(e) => return Err(e.into()),
@@ -131,16 +134,44 @@ impl RawdogClient {
                     }
                 }
 
-                // DEBUG ONLY: DELETE AFTER TESTING.
-                println!("METADATA: {:?}", String::from_utf8(md_info).unwrap());
-                println!("PAYLOAD: {:?}", String::from_utf8(payload_info).unwrap());
+                // convert the payload Vec<u8> to a &str so it can be processed.
+                let str_payload: &str;
+                match str::from_utf8(&payload_info) {
+                    Ok(result) => str_payload = result,
+                    Err(e) => return Err(e.into()),
+                }
+
+                // base64-decode the payload's str.
+                let dec_payload: Vec<u8>;
+                match base64::engine::general_purpose::STANDARD_NO_PAD.decode(str_payload) {
+                    Ok(result) => dec_payload = result,
+                    Err(e) => return Err(e.into()),
+                }
+
+                // convert the base64-decoded payload Vec<u8> to a &str.
+                let dec_payload_str: &str;
+                match str::from_utf8(&dec_payload) {
+                    Ok(result) => dec_payload_str = result,
+                    Err(e) => return Err(e.into()),
+                }
+
+                // JSON deserialize the base64-decoded value to a TcpStatusMessage.
+                match serde_json::from_str(dec_payload_str) {
+                    Ok(result) => payload = result,
+                    Err(e) => return Err(e.into()),
+                }
+
+                // if an error code has been returned by the server, raise an error.
+                if payload.code >= 400 {
+                    return Err(payload.message.into());
+                }
             }
         }
 
         // TODO: create metadata and data byte arrays and use
         // them to read the remaining transmission.
 
-        return Ok(("".to_string(), "".to_string()));
+        return Ok(("".to_string(), payload.message));
     }
 
     /// function designed to connect to the rawdog server
