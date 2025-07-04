@@ -8,3 +8,9 @@ pub struct GeneralMetadata {
     pub agent_name: String,
     pub addl_data: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
+pub struct TcpStatusMessage {
+    pub code: i64,
+    pub message: String,
+}
