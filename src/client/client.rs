@@ -37,7 +37,10 @@ impl RawdogClient {
 
     /// function designed to receive data from the rawdog
     /// server and return the metadata and payload.
-    pub fn recv(mut conn: TcpStream) -> Result<(String, String), Box<dyn std::error::Error>> {
+    pub fn recv(
+        &self,
+        mut conn: TcpStream,
+    ) -> Result<(String, String), Box<dyn std::error::Error>> {
         let md_size: u16;
         let data_size: u64;
         let mut size_buffer: [u8; SIZE_CHUNK] = [0; SIZE_CHUNK];
@@ -140,7 +143,7 @@ impl RawdogClient {
         &self,
         metadata: GeneralMetadata,
         message: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(String, String), Box<dyn std::error::Error>> {
         match self.connect() {
             Ok(mut conn) => {
                 let metadata_str: String;
@@ -201,7 +204,7 @@ impl RawdogClient {
                     }
                 }
 
-                return Ok(());
+                return self.recv(conn);
             }
             Err(e) => {
                 println!("ERROR connecting to server - {:#?}", e);
