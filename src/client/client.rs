@@ -264,6 +264,7 @@ impl RawdogClient {
                     }
                 }
 
+                // read and return the response from the server.
                 return self.recv(conn);
             }
             Err(e) => {
