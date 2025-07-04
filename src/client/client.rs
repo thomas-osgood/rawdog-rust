@@ -90,10 +90,6 @@ impl RawdogClient {
                     Err(e) => return Err(e.into()),
                 }
 
-                // DEBUG ONLY: DELETE AFTER TESTING.
-                println!("MD SIZE: {:?}", md_size);
-                println!("DATA SIZE: {:?}", data_size);
-
                 // get the number of 1024 byte blocks that are needed
                 // to read all the metadata information.
                 let mut i_metadata: u16 = md_size / SIZE_BLOCK as u16;
@@ -107,10 +103,6 @@ impl RawdogClient {
                 if (data_size % SIZE_BLOCK as u64) != 0 {
                     i_payload += 1;
                 }
-
-                // DEBUG ONLY: DELETE AFTER TESTING.
-                println!("i_metadata: {:?}", i_metadata);
-                println!("i_payload: {:?}", i_payload);
 
                 // conduct the necessary amount of reads on the connection
                 // to receive all the metadata.
