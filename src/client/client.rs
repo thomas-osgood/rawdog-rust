@@ -140,12 +140,15 @@ impl RawdogClient {
         }
 
         if md_info.len() > 0 {
+            // convert the metadata bytes to a &str for
+            // further processing.
             let str_metadata: &str;
             match str::from_utf8(&md_info) {
                 Ok(result) => str_metadata = result,
                 Err(e) => return Err(e.into()),
             }
 
+            // JSON deserialize the metadata string to a TcpHeader object.
             match serde_json::from_str(str_metadata) {
                 Ok(result) => md = result,
                 Err(e) => return Err(e.into()),
