@@ -53,6 +53,8 @@ impl RawdogClient {
         let md: TcpHeader;
         let payload: TcpStatusMessage;
 
+        // block designed to receive all bytes from the server and
+        // save them in Vec<u8> variables for further processing.
         match conn.read_exact(&mut size_buffer) {
             Err(e) => return Err(e.into()),
             _ => {
