@@ -91,11 +91,17 @@ impl RawdogClient {
 
                 // get the number of 1024 byte blocks that are needed
                 // to read all the metadata information.
-                let i_metadata: u16 = (md_size / SIZE_BLOCK as u16) + (md_size % SIZE_BLOCK as u16);
+                let mut i_metadata: u16 = md_size / SIZE_BLOCK as u16;
+                if (md_size % SIZE_BLOCK as u16) != 0 {
+                    i_metadata += 1;
+                }
+
                 // get the number of 1024 byte blocks that are needed
                 // to read all the payload information.
-                let i_payload: u64 =
-                    (data_size / SIZE_BLOCK as u64) + (data_size % SIZE_BLOCK as u64);
+                let mut i_payload: u64 = data_size / SIZE_BLOCK as u64;
+                if (data_size % SIZE_BLOCK as u64) != 0 {
+                    i_payload += 1;
+                }
 
                 // DEBUG ONLY: DELETE AFTER TESTING.
                 println!("i_metadata: {:?}", i_metadata);
