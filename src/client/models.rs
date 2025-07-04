@@ -16,8 +16,17 @@ pub struct TcpHeader {
     pub addldata: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct TcpStatusMessage {
     pub code: i64,
     pub message: String,
+}
+
+impl Default for TcpStatusMessage {
+    fn default() -> Self {
+        TcpStatusMessage {
+            code: 200,
+            message: String::default(),
+        }
+    }
 }
