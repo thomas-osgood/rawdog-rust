@@ -108,10 +108,7 @@ impl RawdogClient {
                 // to receive all the metadata.
                 for _ in 1..i_metadata + 1 {
                     match conn.read(&mut temp_buffer) {
-                        Ok(n) => {
-                            println!("Read {:?} bytes of metadata", n);
-                            md_info.append(temp_buffer[..n].to_vec().as_mut());
-                        }
+                        Ok(n) => md_info.append(temp_buffer[..n].to_vec().as_mut()),
                         Err(e) => return Err(e.into()),
                     }
                 }
@@ -120,10 +117,7 @@ impl RawdogClient {
                 // to receive all the payload data.
                 for _ in 1..i_payload + 1 {
                     match conn.read(&mut temp_buffer) {
-                        Ok(n) => {
-                            println!("Read {:?} bytes of payload", n);
-                            payload_info.append(temp_buffer[..n].to_vec().as_mut());
-                        }
+                        Ok(n) => payload_info.append(temp_buffer[..n].to_vec().as_mut()),
                         Err(e) => return Err(e.into()),
                     }
                 }
