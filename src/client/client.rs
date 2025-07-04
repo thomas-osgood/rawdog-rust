@@ -6,7 +6,7 @@ use std::{
 
 use base64::Engine;
 
-use crate::client::models::{GeneralMetadata, TcpStatusMessage};
+use crate::client::models::{GeneralMetadata, TcpHeader, TcpStatusMessage};
 
 const SIZE_BLOCK: usize = 1024;
 const SIZE_CHUNK: usize = 10;
@@ -41,7 +41,7 @@ impl RawdogClient {
     pub fn recv(
         &self,
         mut conn: TcpStream,
-    ) -> Result<(String, String), Box<dyn std::error::Error>> {
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
         let md_size: u16;
         let data_size: u64;
         let mut size_buffer: [u8; SIZE_CHUNK] = [0; SIZE_CHUNK];
@@ -50,6 +50,7 @@ impl RawdogClient {
         let mut md_info: Vec<u8> = Vec::<u8>::new();
         let mut payload_info: Vec<u8> = Vec::<u8>::new();
 
+        let md: TcpHeader;
         let payload: TcpStatusMessage;
 
         match conn.read_exact(&mut size_buffer) {
@@ -134,31 +135,50 @@ impl RawdogClient {
                     }
                 }
 
-                // convert the payload Vec<u8> to a &str so it can be processed.
-                let str_payload: &str;
-                match str::from_utf8(&payload_info) {
-                    Ok(result) => str_payload = result,
-                    Err(e) => return Err(e.into()),
+                if md_info.len() > 0 {
+                    let str_metadata: &str;
+                    match str::from_utf8(&md_info) {
+                        Ok(result) => str_metadata = result,
+                        Err(e) => return Err(e.into()),
+                    }
+
+                    match serde_json::from_str(str_metadata) {
+                        Ok(result) => md = result,
+                        Err(e) => return Err(e.into()),
+                    }
+                } else {
+                    md = TcpHeader::default();
                 }
 
-                // base64-decode the payload's str.
-                let dec_payload: Vec<u8>;
-                match base64::engine::general_purpose::STANDARD_NO_PAD.decode(str_payload) {
-                    Ok(result) => dec_payload = result,
-                    Err(e) => return Err(e.into()),
-                }
+                if payload_info.len() > 0 {
+                    // convert the payload Vec<u8> to a &str so it can be processed.
+                    let str_payload: &str;
+                    match str::from_utf8(&payload_info) {
+                        Ok(result) => str_payload = result,
+                        Err(e) => return Err(e.into()),
+                    }
 
-                // convert the base64-decoded payload Vec<u8> to a &str.
-                let dec_payload_str: &str;
-                match str::from_utf8(&dec_payload) {
-                    Ok(result) => dec_payload_str = result,
-                    Err(e) => return Err(e.into()),
-                }
+                    // base64-decode the payload's str.
+                    let dec_payload: Vec<u8>;
+                    match base64::engine::general_purpose::STANDARD_NO_PAD.decode(str_payload) {
+                        Ok(result) => dec_payload = result,
+                        Err(e) => return Err(e.into()),
+                    }
 
-                // JSON deserialize the base64-decoded value to a TcpStatusMessage.
-                match serde_json::from_str(dec_payload_str) {
-                    Ok(result) => payload = result,
-                    Err(e) => return Err(e.into()),
+                    // convert the base64-decoded payload Vec<u8> to a &str.
+                    let dec_payload_str: &str;
+                    match str::from_utf8(&dec_payload) {
+                        Ok(result) => dec_payload_str = result,
+                        Err(e) => return Err(e.into()),
+                    }
+
+                    // JSON deserialize the base64-decoded value to a TcpStatusMessage.
+                    match serde_json::from_str(dec_payload_str) {
+                        Ok(result) => payload = result,
+                        Err(e) => return Err(e.into()),
+                    }
+                } else {
+                    payload = TcpStatusMessage::default();
                 }
 
                 // if an error code has been returned by the server, raise an error.
@@ -171,7 +191,7 @@ impl RawdogClient {
         // TODO: create metadata and data byte arrays and use
         // them to read the remaining transmission.
 
-        return Ok(("".to_string(), payload.message));
+        return Ok((md, payload.message));
     }
 
     /// function designed to connect to the rawdog server
@@ -180,7 +200,7 @@ impl RawdogClient {
         &self,
         metadata: GeneralMetadata,
         message: String,
-    ) -> Result<(String, String), Box<dyn std::error::Error>> {
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
         match self.connect() {
             Ok(mut conn) => {
                 let metadata_str: String;
