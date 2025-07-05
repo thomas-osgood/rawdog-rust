@@ -42,8 +42,8 @@ impl RawdogClient {
     /// return the connection object. if this fails, an error
     /// will be returned.
     fn connect(&self) -> Result<TcpStream, std::io::Error> {
-        let target: String = format!("{}:{}", self.servaddr, self.servport);
         let connection: TcpStream;
+        let target: String = format!("{}:{}", self.servaddr, self.servport);
 
         match TcpStream::connect(target) {
             Ok(conn) => connection = conn,
