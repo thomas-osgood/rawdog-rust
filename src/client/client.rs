@@ -217,6 +217,8 @@ impl RawdogClient {
         }
 
         // set timeouts for read and write.
+        //
+        // reference: https://www.reddit.com/r/rust/comments/tjg3bp/tcp_streamread_but_give_up_after_some_seconds/
         _ = connection.set_read_timeout(Some(self.read_timeout));
         _ = connection.set_write_timeout(Some(self.send_timeout));
 
