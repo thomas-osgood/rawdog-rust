@@ -206,19 +206,13 @@ impl RawdogClient {
         // will be transmitted to.
         match self.connect() {
             Ok(conn) => connection = conn,
-            Err(e) => {
-                println!("ERROR connecting to server - {:#?}", e);
-                return Err(e.into());
-            }
+            Err(e) => return Err(format!("ERROR connecting to server - {:#?}", e).into()),
         }
 
         // JSON serialize the metadata passed in.
         match serde_json::to_string(&metadata) {
             Ok(serialized) => metadata_str = serialized,
-            Err(e) => {
-                println!("ERROR serializing metadata: {:?}", e);
-                return Err(e.into());
-            }
+            Err(e) => return Err(format!("ERROR serializing metadata: {:?}", e).into()),
         }
 
         // get the metadata length and convert it to the
@@ -234,37 +228,25 @@ impl RawdogClient {
         // write metadata to the wire.
         match connection.write_all(&md_size_bytes) {
             Ok(_) => {}
-            Err(e) => {
-                println!("ERROR transmitting metadata size: {:?}", e);
-                return Err(e.into());
-            }
+            Err(e) => return Err(format!("ERROR transmitting metadata size: {:?}", e).into()),
         };
 
         // write payload size to the wire.
         match connection.write_all(&data_size_bytes) {
             Ok(_) => {}
-            Err(e) => {
-                println!("ERROR transmitting data size: {:?}", e);
-                return Err(e.into());
-            }
+            Err(e) => return Err(format!("ERROR transmitting data size: {:?}", e).into()),
         }
 
         // transmit metadata chunk.
         match connection.write_all(metadata_str.as_bytes()) {
             Ok(_) => {}
-            Err(e) => {
-                println!("ERROR transmitting metadata: {:?}", e);
-                return Err(e.into());
-            }
+            Err(e) => return Err(format!("ERROR transmitting metadata: {:?}", e).into()),
         }
 
         // transmit main payload.
         match connection.write_all(payload_enc.as_bytes()) {
             Ok(_) => {}
-            Err(e) => {
-                println!("ERROR transmitting payload: {:?}", e);
-                return Err(e.into());
-            }
+            Err(e) => return Err(format!("ERROR transmitting payload: {:?}", e).into()),
         }
 
         // read and return the response from the server.
