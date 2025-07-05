@@ -1,4 +1,4 @@
-use core::str;
+use core::{str, time};
 use std::{
     io::{Read, Write},
     net::TcpStream,
@@ -13,8 +13,13 @@ const SIZE_CHUNK: usize = 10;
 const SIZE_DATA: usize = 8;
 const SIZE_MD: usize = 2;
 
+const TIMEOUT_READ_DEFAULT: u64 = 10;
+const TIMEOUT_SEND_DEFAULT: u64 = 10;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawdogClient {
+    pub read_timeout: time::Duration,
+    pub send_timeout: time::Duration,
     pub servaddr: String,
     pub servport: i64,
 }
@@ -24,6 +29,8 @@ pub struct RawdogClient {
 impl Default for RawdogClient {
     fn default() -> Self {
         RawdogClient {
+            read_timeout: time::Duration::from_secs(TIMEOUT_READ_DEFAULT),
+            send_timeout: time::Duration::from_secs(TIMEOUT_SEND_DEFAULT),
             servaddr: "localhost".to_string(),
             servport: 8080,
         }
@@ -208,6 +215,10 @@ impl RawdogClient {
             Ok(conn) => connection = conn,
             Err(e) => return Err(format!("ERROR connecting to server - {:#?}", e).into()),
         }
+
+        // set timeouts for read and write.
+        _ = connection.set_read_timeout(Some(self.read_timeout));
+        _ = connection.set_write_timeout(Some(self.send_timeout));
 
         // JSON serialize the metadata passed in.
         match serde_json::to_string(&metadata) {
