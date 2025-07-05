@@ -60,67 +60,67 @@ impl RawdogClient {
         // save them in Vec<u8> variables for further processing.
         match conn.read_exact(&mut size_buffer) {
             Err(e) => return Err(e.into()),
-            _ => {
-                let md_size_raw: [u8; SIZE_MD];
-                let data_size_raw: [u8; SIZE_DATA];
+            _ => {}
+        }
 
-                // assign the first two bytes of the data read
-                // to the "md_size_raw" variable.
-                match size_buffer[0..SIZE_MD].try_into() {
-                    Ok(bytes_read) => md_size_raw = bytes_read,
-                    Err(e) => return Err(e.into()),
-                }
+        let md_size_raw: [u8; SIZE_MD];
+        let data_size_raw: [u8; SIZE_DATA];
 
-                // assign the next eight bytes of the data read
-                // to the "data_size_raw" variable.
-                match size_buffer[SIZE_MD..SIZE_MD + SIZE_DATA].try_into() {
-                    Ok(bytes_read) => data_size_raw = bytes_read,
-                    Err(e) => return Err(e.into()),
-                }
+        // assign the first two bytes of the data read
+        // to the "md_size_raw" variable.
+        match size_buffer[0..SIZE_MD].try_into() {
+            Ok(bytes_read) => md_size_raw = bytes_read,
+            Err(e) => return Err(e.into()),
+        }
 
-                // convert the metadata size bytes to an unsigned 16-bit int.
-                match u16::from_be_bytes(md_size_raw).try_into() {
-                    Ok(md_size_res) => md_size = md_size_res,
-                    Err(e) => return Err(e.into()),
-                }
+        // assign the next eight bytes of the data read
+        // to the "data_size_raw" variable.
+        match size_buffer[SIZE_MD..SIZE_MD + SIZE_DATA].try_into() {
+            Ok(bytes_read) => data_size_raw = bytes_read,
+            Err(e) => return Err(e.into()),
+        }
 
-                // convert the data size bytes to an unsigned 64-bit int.
-                match u64::from_be_bytes(data_size_raw).try_into() {
-                    Ok(data_size_res) => data_size = data_size_res,
-                    Err(e) => return Err(e.into()),
-                }
+        // convert the metadata size bytes to an unsigned 16-bit int.
+        match u16::from_be_bytes(md_size_raw).try_into() {
+            Ok(md_size_res) => md_size = md_size_res,
+            Err(e) => return Err(e.into()),
+        }
 
-                // get the number of 1024 byte blocks that are needed
-                // to read all the metadata information.
-                let mut i_metadata: u16 = md_size / SIZE_BLOCK as u16;
-                if (md_size % SIZE_BLOCK as u16) != 0 {
-                    i_metadata += 1;
-                }
+        // convert the data size bytes to an unsigned 64-bit int.
+        match u64::from_be_bytes(data_size_raw).try_into() {
+            Ok(data_size_res) => data_size = data_size_res,
+            Err(e) => return Err(e.into()),
+        }
 
-                // get the number of 1024 byte blocks that are needed
-                // to read all the payload information.
-                let mut i_payload: u64 = data_size / SIZE_BLOCK as u64;
-                if (data_size % SIZE_BLOCK as u64) != 0 {
-                    i_payload += 1;
-                }
+        // get the number of 1024 byte blocks that are needed
+        // to read all the metadata information.
+        let mut i_metadata: u16 = md_size / SIZE_BLOCK as u16;
+        if (md_size % SIZE_BLOCK as u16) != 0 {
+            i_metadata += 1;
+        }
 
-                // conduct the necessary amount of reads on the connection
-                // to receive all the metadata.
-                for _ in 1..i_metadata + 1 {
-                    match conn.read(&mut temp_buffer) {
-                        Ok(n) => md_info.append(temp_buffer[..n].to_vec().as_mut()),
-                        Err(e) => return Err(e.into()),
-                    }
-                }
+        // get the number of 1024 byte blocks that are needed
+        // to read all the payload information.
+        let mut i_payload: u64 = data_size / SIZE_BLOCK as u64;
+        if (data_size % SIZE_BLOCK as u64) != 0 {
+            i_payload += 1;
+        }
 
-                // conduct the necessary amount of reads on the connection
-                // to receive all the payload data.
-                for _ in 1..i_payload + 1 {
-                    match conn.read(&mut temp_buffer) {
-                        Ok(n) => payload_info.append(temp_buffer[..n].to_vec().as_mut()),
-                        Err(e) => return Err(e.into()),
-                    }
-                }
+        // conduct the necessary amount of reads on the connection
+        // to receive all the metadata.
+        for _ in 1..i_metadata + 1 {
+            match conn.read(&mut temp_buffer) {
+                Ok(n) => md_info.append(temp_buffer[..n].to_vec().as_mut()),
+                Err(e) => return Err(e.into()),
+            }
+        }
+
+        // conduct the necessary amount of reads on the connection
+        // to receive all the payload data.
+        for _ in 1..i_payload + 1 {
+            match conn.read(&mut temp_buffer) {
+                Ok(n) => payload_info.append(temp_buffer[..n].to_vec().as_mut()),
+                Err(e) => return Err(e.into()),
             }
         }
 
