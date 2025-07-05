@@ -197,73 +197,77 @@ impl RawdogClient {
         metadata: GeneralMetadata,
         message: String,
     ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
+        let mut connection: TcpStream;
+
+        let metadata_str: String;
+        let payload_enc: String = base64::engine::general_purpose::STANDARD.encode(message);
+
+        // attempt to connect to the rawdog server the paylod
+        // will be transmitted to.
         match self.connect() {
-            Ok(mut conn) => {
-                let metadata_str: String;
-                let payload_enc: String = base64::engine::general_purpose::STANDARD.encode(message);
-
-                // JSON serialize the metadata passed in.
-                match serde_json::to_string(&metadata) {
-                    Ok(serialized) => metadata_str = serialized,
-                    Err(e) => {
-                        println!("ERROR serializing metadata: {:?}", e);
-                        return Err(e.into());
-                    }
-                }
-
-                // get the metadata length and convert it to the
-                // BigEndian byte representation.
-                let len_md: u16 = metadata_str.len() as u16;
-                let md_size_bytes: [u8; SIZE_MD] = len_md.to_be_bytes();
-
-                // get the message length and convert it to the
-                // BigEndian byte representation.
-                let len_data: u64 = payload_enc.len() as u64;
-                let data_size_bytes: [u8; SIZE_DATA] = len_data.to_be_bytes();
-
-                // write metadata to the wire.
-                match conn.write_all(&md_size_bytes) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("ERROR transmitting metadata size: {:?}", e);
-                        return Err(e.into());
-                    }
-                };
-
-                // write payload size to the wire.
-                match conn.write_all(&data_size_bytes) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("ERROR transmitting data size: {:?}", e);
-                        return Err(e.into());
-                    }
-                }
-
-                // transmit metadata chunk.
-                match conn.write_all(metadata_str.as_bytes()) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("ERROR transmitting metadata: {:?}", e);
-                        return Err(e.into());
-                    }
-                }
-
-                // transmit main payload.
-                match conn.write_all(payload_enc.as_bytes()) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("ERROR transmitting payload: {:?}", e);
-                        return Err(e.into());
-                    }
-                }
-
-                // read and return the response from the server.
-                return self.recv(conn);
-            }
+            Ok(conn) => connection = conn,
             Err(e) => {
                 println!("ERROR connecting to server - {:#?}", e);
                 return Err(e.into());
             }
         }
+
+        // JSON serialize the metadata passed in.
+        match serde_json::to_string(&metadata) {
+            Ok(serialized) => metadata_str = serialized,
+            Err(e) => {
+                println!("ERROR serializing metadata: {:?}", e);
+                return Err(e.into());
+            }
+        }
+
+        // get the metadata length and convert it to the
+        // BigEndian byte representation.
+        let len_md: u16 = metadata_str.len() as u16;
+        let md_size_bytes: [u8; SIZE_MD] = len_md.to_be_bytes();
+
+        // get the message length and convert it to the
+        // BigEndian byte representation.
+        let len_data: u64 = payload_enc.len() as u64;
+        let data_size_bytes: [u8; SIZE_DATA] = len_data.to_be_bytes();
+
+        // write metadata to the wire.
+        match connection.write_all(&md_size_bytes) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("ERROR transmitting metadata size: {:?}", e);
+                return Err(e.into());
+            }
+        };
+
+        // write payload size to the wire.
+        match connection.write_all(&data_size_bytes) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("ERROR transmitting data size: {:?}", e);
+                return Err(e.into());
+            }
+        }
+
+        // transmit metadata chunk.
+        match connection.write_all(metadata_str.as_bytes()) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("ERROR transmitting metadata: {:?}", e);
+                return Err(e.into());
+            }
+        }
+
+        // transmit main payload.
+        match connection.write_all(payload_enc.as_bytes()) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("ERROR transmitting payload: {:?}", e);
+                return Err(e.into());
+            }
+        }
+
+        // read and return the response from the server.
+        return self.recv(connection);
     }
 }
