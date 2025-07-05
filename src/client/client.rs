@@ -43,7 +43,20 @@ impl RawdogClient {
     /// will be returned.
     fn connect(&self) -> Result<TcpStream, std::io::Error> {
         let target: String = format!("{}:{}", self.servaddr, self.servport);
-        TcpStream::connect(target)
+        let connection: TcpStream;
+
+        match TcpStream::connect(target) {
+            Ok(conn) => connection = conn,
+            Err(e) => return Err(e.into()),
+        }
+
+        // set timeouts for read and write.
+        //
+        // reference: https://www.reddit.com/r/rust/comments/tjg3bp/tcp_streamread_but_give_up_after_some_seconds/
+        _ = connection.set_read_timeout(self.read_timeout);
+        _ = connection.set_write_timeout(self.send_timeout);
+
+        return Ok(connection);
     }
 
     /// function designed to receive data from the rawdog
@@ -215,12 +228,6 @@ impl RawdogClient {
             Ok(conn) => connection = conn,
             Err(e) => return Err(format!("ERROR connecting to server - {:#?}", e).into()),
         }
-
-        // set timeouts for read and write.
-        //
-        // reference: https://www.reddit.com/r/rust/comments/tjg3bp/tcp_streamread_but_give_up_after_some_seconds/
-        _ = connection.set_read_timeout(self.read_timeout);
-        _ = connection.set_write_timeout(self.send_timeout);
 
         // JSON serialize the metadata passed in.
         match serde_json::to_string(&metadata) {
