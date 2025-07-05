@@ -18,8 +18,8 @@ const TIMEOUT_SEND_DEFAULT: u64 = 10;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawdogClient {
-    pub read_timeout: time::Duration,
-    pub send_timeout: time::Duration,
+    pub read_timeout: Option<time::Duration>,
+    pub send_timeout: Option<time::Duration>,
     pub servaddr: String,
     pub servport: i64,
 }
@@ -29,8 +29,8 @@ pub struct RawdogClient {
 impl Default for RawdogClient {
     fn default() -> Self {
         RawdogClient {
-            read_timeout: time::Duration::from_secs(TIMEOUT_READ_DEFAULT),
-            send_timeout: time::Duration::from_secs(TIMEOUT_SEND_DEFAULT),
+            read_timeout: Some(time::Duration::from_secs(TIMEOUT_READ_DEFAULT)),
+            send_timeout: Some(time::Duration::from_secs(TIMEOUT_SEND_DEFAULT)),
             servaddr: "localhost".to_string(),
             servport: 8080,
         }
@@ -219,8 +219,8 @@ impl RawdogClient {
         // set timeouts for read and write.
         //
         // reference: https://www.reddit.com/r/rust/comments/tjg3bp/tcp_streamread_but_give_up_after_some_seconds/
-        _ = connection.set_read_timeout(Some(self.read_timeout));
-        _ = connection.set_write_timeout(Some(self.send_timeout));
+        _ = connection.set_read_timeout(self.read_timeout);
+        _ = connection.set_write_timeout(self.send_timeout);
 
         // JSON serialize the metadata passed in.
         match serde_json::to_string(&metadata) {
