@@ -40,6 +40,16 @@ impl Default for TcpStatusMessage {
 
 impl TcpStatusMessage {
     /// helper function designed to determine if the
+    /// object contains a non-zero length message.
+    ///
+    /// this trims the message field before checking
+    /// the length.
+    pub fn has_message(&self) -> bool {
+        let trimmed: &str = self.message.trim();
+        trimmed.len() > 0
+    }
+
+    /// helper function designed to determine if the
     /// status message contains an error code (400 or higher).
     pub fn is_error(&self) -> bool {
         self.code >= 400
