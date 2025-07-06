@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::client::models::GeneralMetadata;
+use crate::client::models::TcpHeader;
 
 mod client;
 
@@ -8,7 +8,7 @@ fn main() {
     let test_client: client::client::RawdogClient = client::client::RawdogClient::default();
     println!("{:?}", test_client);
 
-    let md: GeneralMetadata = GeneralMetadata {
+    let md: TcpHeader = TcpHeader {
         endpoint: 1,
         agentname: "test agent".to_string(),
         addldata: String::default(),

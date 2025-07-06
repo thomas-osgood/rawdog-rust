@@ -6,7 +6,7 @@ use std::{
 
 use base64::Engine;
 
-use crate::client::models::{GeneralMetadata, TcpHeader, TcpStatusMessage};
+use crate::client::models::{TcpHeader, TcpStatusMessage};
 
 const DEFAULT_ADDR: &str = "localhost";
 
@@ -245,7 +245,7 @@ impl RawdogClient {
     /// it will return an error.
     pub fn send(
         &self,
-        metadata: GeneralMetadata,
+        metadata: TcpHeader,
         message: String,
     ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
         let mut connection: TcpStream;

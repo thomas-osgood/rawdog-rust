@@ -1,20 +1,17 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
-/// struct defining the architecture of General Metadata
-/// that is expected when making a request to a Rawdog Server.
-pub struct GeneralMetadata {
-    pub endpoint: i64,
-    pub agentname: String,
-    pub addldata: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 /// struct defining the shape of the metadata information that
 /// will be passed to and read from the server.
 pub struct TcpHeader {
+    /// equivalent of HTTP's User-Agent header.
     pub agentname: String,
+    /// endpoint the request is being transmitted to.
+    ///
+    /// required.
     pub endpoint: i64,
+    /// additional metadata that is to be transmitted
+    /// with the request.
     pub addldata: String,
 }
 
