@@ -230,7 +230,7 @@ impl RawdogClient {
         }
 
         // if an error code has been returned by the server, raise an error.
-        if payload.code >= 400 {
+        if payload.is_error() {
             return Err(payload.message.into());
         }
 
