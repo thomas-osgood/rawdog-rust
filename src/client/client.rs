@@ -8,6 +8,9 @@ use base64::Engine;
 
 use crate::client::models::{GeneralMetadata, TcpHeader, TcpStatusMessage};
 
+const SERVPORT_MAX: i64 = (1 << 16) - 1;
+const SERVPORT_MIN: i64 = 1;
+
 const SIZE_BLOCK: usize = 1024;
 const SIZE_CHUNK: usize = 10;
 const SIZE_DATA: usize = 8;
@@ -41,8 +44,24 @@ impl RawdogClient {
     /// helper function designed to connect to the server and
     /// return the connection object. if this fails, an error
     /// will be returned.
-    fn connect(&self) -> Result<TcpStream, std::io::Error> {
+    fn connect(&self) -> Result<TcpStream, Box<dyn std::error::Error>> {
         let connection: TcpStream;
+
+        // basic address validation.
+        //
+        // make sure the server address is not an empty string.
+        let addr: &str = self.servaddr.trim();
+        if addr.len() < 1 {
+            return Err("server address cannot be an empty string".into());
+        }
+
+        // basic port validation.
+        //
+        // make sure the port is within the 1 - 65535 range.
+        if (self.servport < SERVPORT_MIN) || (self.servport > SERVPORT_MAX) {
+            return Err("server port must be within 1 <= port <= 65535".into());
+        }
+
         let target: String = format!("{}:{}", self.servaddr, self.servport);
 
         match TcpStream::connect(target) {
