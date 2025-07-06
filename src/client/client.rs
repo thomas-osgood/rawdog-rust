@@ -200,38 +200,17 @@ impl RawdogClient {
         return Ok((md_size, data_size));
     }
 
-    /// function designed to receive data from the rawdog
-    /// server and return the metadata and payload.
-    pub fn recv(
+    /// helper function designed to read the entire message transmitted
+    /// from the server based on the metadata size and data size passed in.
+    fn read_payload_bytes(
         &self,
         mut conn: TcpStream,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        let md_size: u16;
-        let data_size: u64;
-
-        let mut size_buffer: [u8; SIZE_CHUNK] = [0; SIZE_CHUNK];
-        let mut temp_buffer: [u8; SIZE_BLOCK] = [0; SIZE_BLOCK];
-
+        md_size: u16,
+        data_size: u64,
+    ) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>> {
         let mut md_info: Vec<u8> = Vec::<u8>::new();
         let mut payload_info: Vec<u8> = Vec::<u8>::new();
-
-        let md: TcpHeader;
-        let payload: TcpStatusMessage;
-
-        // block designed to receive all bytes from the server and
-        // save them in Vec<u8> variables for further processing.
-        match conn.read_exact(&mut size_buffer) {
-            Err(e) => return Err(e.into()),
-            _ => {}
-        }
-
-        // extract the metadata and data sizes from the size_buffer bytes.
-        match self.process_size_bytes(size_buffer) {
-            Ok((md_size_resp, data_size_resp)) => {
-                (md_size, data_size) = (md_size_resp, data_size_resp)
-            }
-            Err(e) => return Err(e),
-        }
+        let mut temp_buffer: [u8; SIZE_BLOCK] = [0; SIZE_BLOCK];
 
         // get the number of 1024 byte blocks that are needed
         // to read all the metadata information.
@@ -263,6 +242,47 @@ impl RawdogClient {
                 Ok(n) => payload_info.append(temp_buffer[..n].to_vec().as_mut()),
                 Err(e) => return Err(e.into()),
             }
+        }
+
+        return Ok((md_info, payload_info));
+    }
+
+    /// function designed to receive data from the rawdog
+    /// server and return the metadata and payload.
+    pub fn recv(
+        &self,
+        mut conn: TcpStream,
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
+        let md_size: u16;
+        let data_size: u64;
+
+        let mut size_buffer: [u8; SIZE_CHUNK] = [0; SIZE_CHUNK];
+
+        let md_info: Vec<u8>;
+        let payload_info: Vec<u8>;
+
+        let md: TcpHeader;
+        let payload: TcpStatusMessage;
+
+        // block designed to receive all bytes from the server and
+        // save them in Vec<u8> variables for further processing.
+        match conn.read_exact(&mut size_buffer) {
+            Err(e) => return Err(e.into()),
+            _ => {}
+        }
+
+        // extract the metadata and data sizes from the size_buffer bytes.
+        match self.process_size_bytes(size_buffer) {
+            Ok((md_size_resp, data_size_resp)) => {
+                (md_size, data_size) = (md_size_resp, data_size_resp)
+            }
+            Err(e) => return Err(e),
+        }
+
+        // read the data transmitted by to the server.
+        match self.read_payload_bytes(conn, md_size, data_size) {
+            Ok((md_resp, data_resp)) => (md_info, payload_info) = (md_resp, data_resp),
+            Err(e) => return Err(e),
         }
 
         // process the data received from the server.
