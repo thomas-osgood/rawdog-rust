@@ -8,6 +8,11 @@ use base64::Engine;
 
 use crate::client::models::{GeneralMetadata, TcpHeader, TcpStatusMessage};
 
+const DEFAULT_ADDR: &str = "localhost";
+
+const ERR_PORT_RANGE: &str = "server port must be within 1 <= port <= 65535";
+const ERR_SERVADDR_EMPTY: &str = "server address cannot be an empty string";
+
 const SERVPORT_MAX: i64 = (1 << 16) - 1;
 const SERVPORT_MIN: i64 = 1;
 
@@ -34,7 +39,7 @@ impl Default for RawdogClient {
         RawdogClient {
             read_timeout: Some(time::Duration::from_secs(TIMEOUT_READ_DEFAULT)),
             send_timeout: Some(time::Duration::from_secs(TIMEOUT_SEND_DEFAULT)),
-            servaddr: "localhost".to_string(),
+            servaddr: DEFAULT_ADDR.to_string(),
             servport: 8080,
         }
     }
@@ -52,14 +57,14 @@ impl RawdogClient {
         // make sure the server address is not an empty string.
         let addr: &str = self.servaddr.trim();
         if addr.len() < 1 {
-            return Err("server address cannot be an empty string".into());
+            return Err(ERR_SERVADDR_EMPTY.into());
         }
 
         // basic port validation.
         //
         // make sure the port is within the 1 - 65535 range.
         if (self.servport < SERVPORT_MIN) || (self.servport > SERVPORT_MAX) {
-            return Err("server port must be within 1 <= port <= 65535".into());
+            return Err(ERR_PORT_RANGE.into());
         }
 
         let target: String = format!("{}:{}", addr, self.servport);
