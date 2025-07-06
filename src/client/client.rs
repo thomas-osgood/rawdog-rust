@@ -279,7 +279,7 @@ impl RawdogClient {
             Err(e) => return Err(e),
         }
 
-        // read the data transmitted by to the server.
+        // read the data transmitted by from the server.
         match self.read_payload_bytes(conn, md_size, data_size) {
             Ok((md_resp, data_resp)) => (md_info, payload_info) = (md_resp, data_resp),
             Err(e) => return Err(e),
