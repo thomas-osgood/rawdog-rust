@@ -62,7 +62,7 @@ impl RawdogClient {
             return Err("server port must be within 1 <= port <= 65535".into());
         }
 
-        let target: String = format!("{}:{}", self.servaddr, self.servport);
+        let target: String = format!("{}:{}", addr, self.servport);
 
         match TcpStream::connect(target) {
             Ok(conn) => connection = conn,
