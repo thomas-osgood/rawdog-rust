@@ -90,6 +90,74 @@ impl RawdogClient {
         return Ok(connection);
     }
 
+    /// helper function designed to take the bytes transmitted
+    /// back from the server, process them, and return the
+    /// metadata (TcpHeader) and message (TcpStatusMessage).
+    fn process_response_bytes(
+        &self,
+        md_buff: Vec<u8>,
+        data_buff: Vec<u8>,
+    ) -> Result<(TcpHeader, TcpStatusMessage), Box<dyn std::error::Error>> {
+        let md: TcpHeader;
+        let payload: TcpStatusMessage;
+
+        // only attempt to process the metadata if the
+        // length of its block is greater than zero; otherwise
+        // set it to a default instance of the struct.
+        if md_buff.len() > 0 {
+            // convert the metadata bytes to a &str for
+            // further processing.
+            let str_metadata: &str;
+            match str::from_utf8(&md_buff) {
+                Ok(result) => str_metadata = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            // JSON deserialize the metadata string to a TcpHeader object.
+            match serde_json::from_str(str_metadata) {
+                Ok(result) => md = result,
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            md = TcpHeader::default();
+        }
+
+        // only attempt to process the payload if its length
+        // is greater than 0; otherwise, set it to an empty string.
+        if data_buff.len() > 0 {
+            // convert the payload Vec<u8> to a &str so it can be processed.
+            let str_payload: &str;
+            match str::from_utf8(&data_buff) {
+                Ok(result) => str_payload = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            // base64-decode the payload's str.
+            let dec_payload: Vec<u8>;
+            match base64::engine::general_purpose::STANDARD.decode(str_payload) {
+                Ok(result) => dec_payload = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            // convert the base64-decoded payload Vec<u8> to a &str.
+            let dec_payload_str: &str;
+            match str::from_utf8(&dec_payload) {
+                Ok(result) => dec_payload_str = result,
+                Err(e) => return Err(e.into()),
+            }
+
+            // JSON deserialize the base64-decoded value to a TcpStatusMessage.
+            match serde_json::from_str(dec_payload_str) {
+                Ok(result) => payload = result,
+                Err(e) => return Err(e.into()),
+            }
+        } else {
+            payload = TcpStatusMessage::default();
+        }
+
+        return Ok((md, payload));
+    }
+
     /// function designed to receive data from the rawdog
     /// server and return the metadata and payload.
     pub fn recv(
@@ -175,58 +243,10 @@ impl RawdogClient {
             }
         }
 
-        // only attempt to process the metadata if the
-        // length of its block is greater than zero; otherwise
-        // set it to a default instance of the struct.
-        if md_info.len() > 0 {
-            // convert the metadata bytes to a &str for
-            // further processing.
-            let str_metadata: &str;
-            match str::from_utf8(&md_info) {
-                Ok(result) => str_metadata = result,
-                Err(e) => return Err(e.into()),
-            }
-
-            // JSON deserialize the metadata string to a TcpHeader object.
-            match serde_json::from_str(str_metadata) {
-                Ok(result) => md = result,
-                Err(e) => return Err(e.into()),
-            }
-        } else {
-            md = TcpHeader::default();
-        }
-
-        // only attempt to process the payload if its length
-        // is greater than 0; otherwise, set it to an empty string.
-        if payload_info.len() > 0 {
-            // convert the payload Vec<u8> to a &str so it can be processed.
-            let str_payload: &str;
-            match str::from_utf8(&payload_info) {
-                Ok(result) => str_payload = result,
-                Err(e) => return Err(e.into()),
-            }
-
-            // base64-decode the payload's str.
-            let dec_payload: Vec<u8>;
-            match base64::engine::general_purpose::STANDARD.decode(str_payload) {
-                Ok(result) => dec_payload = result,
-                Err(e) => return Err(e.into()),
-            }
-
-            // convert the base64-decoded payload Vec<u8> to a &str.
-            let dec_payload_str: &str;
-            match str::from_utf8(&dec_payload) {
-                Ok(result) => dec_payload_str = result,
-                Err(e) => return Err(e.into()),
-            }
-
-            // JSON deserialize the base64-decoded value to a TcpStatusMessage.
-            match serde_json::from_str(dec_payload_str) {
-                Ok(result) => payload = result,
-                Err(e) => return Err(e.into()),
-            }
-        } else {
-            payload = TcpStatusMessage::default();
+        // process the data received from the server.
+        match self.process_response_bytes(md_info, payload_info) {
+            Ok((headers, data)) => (md, payload) = (headers, data),
+            Err(e) => return Err(e),
         }
 
         // if an error code has been returned by the server, raise an error.
