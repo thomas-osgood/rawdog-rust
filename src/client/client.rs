@@ -26,9 +26,16 @@ const TIMEOUT_SEND_DEFAULT: u64 = 10;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawdogClient {
+    /// timeout that will be used when the client receives
+    /// data from the server.
     pub read_timeout: Option<time::Duration>,
+    /// timeout that will be used when the client transmits
+    /// data to the server.
     pub send_timeout: Option<time::Duration>,
+    /// address (ip or domain) of the Rawdog server the client
+    /// will connect to.
     pub servaddr: String,
+    /// port the Rawdog server is listening on.
     pub servport: i64,
 }
 
