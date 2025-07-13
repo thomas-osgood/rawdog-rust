@@ -299,6 +299,15 @@ impl RawdogClient {
         return Ok((md, payload.message));
     }
 
+    /// async version of the recv function. this is a wrapper
+    /// around the synchronous recv function.
+    pub async fn recv_async(
+        &self,
+        conn: TcpStream,
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
+        self.recv(conn)
+    }
+
     /// function designed to connect to the rawdog server
     /// and transmit a message and metadata.
     ///
@@ -364,5 +373,15 @@ impl RawdogClient {
 
         // read and return the response from the server.
         return self.recv(connection);
+    }
+
+    /// async version of the send func. this is a wrapper
+    /// around the synchronous send function.
+    pub async fn send_async(
+        &self,
+        metadata: TcpHeader,
+        message: String,
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
+        self.send(metadata, message)
     }
 }
