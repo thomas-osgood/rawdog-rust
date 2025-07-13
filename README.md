@@ -19,7 +19,9 @@ fn process_response_bytes(&self, md_buff: Vec<u8>, data_buff: Vec<u8>) -> Result
 fn process_size_bytes(&self, size_buffer: [u8; SIZE_CHUNK]) -> Result<(u16, u64), Box<dyn std::error::Error>>
 fn read_payload_bytes(&self, mut conn: TcpStream, md_size: u16, data_size: u64) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>>
 pub fn recv(&self,mut conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
+pub async fn recv_async(&self,mut conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
 pub fn send(&self, metadata: GeneralMetadata, message: String) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
+pub async fn send_async(&self, metadata: GeneralMetadata, message: String) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
 ```
 
 ### Helper Structs
