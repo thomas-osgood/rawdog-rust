@@ -301,7 +301,7 @@ impl RawdogClient {
 
     /// async version of the recv function. this is a wrapper
     /// around the synchronous recv function.
-    pub fn recv_async(
+    pub async fn recv_async(
         &self,
         conn: TcpStream,
     ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
