@@ -11,17 +11,25 @@ pub struct RawdogClient {
     pub servaddr: String,
     pub servport: i64,
 }
+
+pub trait RawdogTcpClient {
+    fn connect(&self, conn_info: TcpConnInfo) -> Result<TcpStream, Box<dyn std::error::Error>>;
+    fn recv(&self, conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
+    fn send(&self, conn_info: TcpConnInfo, metadata: TcpHeader, message: String) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
+}
+
+#[cfg(unix)]
+pub trait RawdogUnixClient {
+    fn connect(&self, conn_info: UnixConnInfo) -> Result<UnixStream, Box<dyn std::error::Error>>;
+    fn recv(&self, conn: UnixStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
+    fn send(&self, conn_info: UnixConnInfo, metadata: TcpHeader, message: String) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
+}
 ```
 
 ```rust
-fn connect(&self) -> Result<TcpStream, std::io::Error>
 fn process_response_bytes(&self, md_buff: Vec<u8>, data_buff: Vec<u8>) -> Result<(TcpHeader, TcpStatusMessage), Box<dyn std::error::Error>>
 fn process_size_bytes(&self, size_buffer: [u8; SIZE_CHUNK]) -> Result<(u16, u64), Box<dyn std::error::Error>>
-fn read_payload_bytes(&self, mut conn: TcpStream, md_size: u16, data_size: u64) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>>
-pub fn recv(&self,mut conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
-pub async fn recv_async(&self,mut conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
-pub fn send(&self, metadata: GeneralMetadata, message: String) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
-pub async fn send_async(&self, metadata: GeneralMetadata, message: String) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>
+fn read_payload_bytes<T: Read>(&self, mut conn: T, md_size: u16, data_size: u64) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>>
 ```
 
 ### Helper Structs

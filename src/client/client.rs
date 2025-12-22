@@ -8,7 +8,11 @@ use base64::Engine;
 
 use crate::client::models::{TcpHeader, TcpStatusMessage};
 
+#[cfg(unix)]
+use std::os::unix::net::UnixStream;
+
 const DEFAULT_ADDR: &str = "localhost";
+const DEFAULT_UNIX_SOCK: &str = "/tmp/rawdog.sock";
 
 const ERR_PORT_RANGE: &str = "server port must be within 1 <= port <= 65535";
 const ERR_SERVADDR_EMPTY: &str = "server address cannot be an empty string";
@@ -25,6 +29,21 @@ const TIMEOUT_READ_DEFAULT: u64 = 10;
 const TIMEOUT_SEND_DEFAULT: u64 = 10;
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TcpConnInfo {
+    /// address (ip or domain) of the Rawdog server the client
+    /// will connect to.
+    pub servaddr: String,
+    /// port the Rawdog server is listening on.
+    pub servport: i64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnixConnInfo {
+    /// unix domain socket path to connect to.
+    pub sockaddr: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct RawdogClient {
     /// timeout that will be used when the client receives
     /// data from the server.
@@ -32,11 +51,49 @@ pub struct RawdogClient {
     /// timeout that will be used when the client transmits
     /// data to the server.
     pub send_timeout: Option<time::Duration>,
-    /// address (ip or domain) of the Rawdog server the client
-    /// will connect to.
-    pub servaddr: String,
-    /// port the Rawdog server is listening on.
-    pub servport: i64,
+}
+
+/// define default address for TcpConninfo.
+impl Default for TcpConnInfo {
+    fn default() -> Self {
+        TcpConnInfo {
+            servaddr: DEFAULT_ADDR.to_string(),
+            servport: 8080,
+        }
+    }
+}
+
+/// define default socket for UnixConnInfo.
+#[cfg(unix)]
+impl Default for UnixConnInfo {
+    fn default() -> Self {
+        UnixConnInfo {
+            sockaddr: DEFAULT_UNIX_SOCK.to_string(),
+        }
+    }
+}
+
+pub trait RawdogTcpClient {
+    fn connect(&self, conn_info: TcpConnInfo) -> Result<TcpStream, Box<dyn std::error::Error>>;
+    fn recv(&self, conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
+    fn send(
+        &self,
+        conn_info: TcpConnInfo,
+        metadata: TcpHeader,
+        message: String,
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
+}
+
+#[cfg(unix)]
+pub trait RawdogUnixClient {
+    fn connect(&self, conn_info: UnixConnInfo) -> Result<UnixStream, Box<dyn std::error::Error>>;
+    fn recv(&self, conn: UnixStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
+    fn send(
+        &self,
+        conn_info: UnixConnInfo,
+        metadata: TcpHeader,
+        message: String,
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
 }
 
 /// implementation of the Default trait for the struct
@@ -46,50 +103,11 @@ impl Default for RawdogClient {
         RawdogClient {
             read_timeout: Some(time::Duration::from_secs(TIMEOUT_READ_DEFAULT)),
             send_timeout: Some(time::Duration::from_secs(TIMEOUT_SEND_DEFAULT)),
-            servaddr: DEFAULT_ADDR.to_string(),
-            servport: 8080,
         }
     }
 }
 
 impl RawdogClient {
-    /// helper function designed to connect to the server and
-    /// return the connection object. if this fails, an error
-    /// will be returned.
-    fn connect(&self) -> Result<TcpStream, Box<dyn std::error::Error>> {
-        let connection: TcpStream;
-
-        // basic address validation.
-        //
-        // make sure the server address is not an empty string.
-        let addr: &str = self.servaddr.trim();
-        if addr.len() < 1 {
-            return Err(ERR_SERVADDR_EMPTY.into());
-        }
-
-        // basic port validation.
-        //
-        // make sure the port is within the 1 - 65535 range.
-        if (self.servport < SERVPORT_MIN) || (self.servport > SERVPORT_MAX) {
-            return Err(ERR_PORT_RANGE.into());
-        }
-
-        let target: String = format!("{}:{}", addr, self.servport);
-
-        match TcpStream::connect(target) {
-            Ok(conn) => connection = conn,
-            Err(e) => return Err(e.into()),
-        }
-
-        // set timeouts for read and write.
-        //
-        // reference: https://www.reddit.com/r/rust/comments/tjg3bp/tcp_streamread_but_give_up_after_some_seconds/
-        _ = connection.set_read_timeout(self.read_timeout);
-        _ = connection.set_write_timeout(self.send_timeout);
-
-        return Ok(connection);
-    }
-
     /// helper function designed to take the bytes transmitted
     /// back from the server, process them, and return the
     /// metadata (TcpHeader) and message (TcpStatusMessage).
@@ -202,9 +220,9 @@ impl RawdogClient {
 
     /// helper function designed to read the entire message transmitted
     /// from the server based on the metadata size and data size passed in.
-    fn read_payload_bytes(
+    fn read_payload_bytes<T: Read>(
         &self,
-        mut conn: TcpStream,
+        mut conn: T,
         md_size: u16,
         data_size: u64,
     ) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>> {
@@ -246,12 +264,192 @@ impl RawdogClient {
 
         return Ok((md_info, payload_info));
     }
+}
+
+/// implementation of the TCP Client for the Rawdog Client.
+impl RawdogTcpClient for RawdogClient {
+    /// helper function designed to connect to the server and
+    /// return the connection object. if this fails, an error
+    /// will be returned.
+    fn connect(&self, conn_info: TcpConnInfo) -> Result<TcpStream, Box<dyn std::error::Error>> {
+        let connection: TcpStream;
+
+        // basic address validation.
+        //
+        // make sure the server address is not an empty string.
+        let addr: &str = conn_info.servaddr.trim();
+        if addr.len() < 1 {
+            return Err(ERR_SERVADDR_EMPTY.into());
+        }
+
+        // basic port validation.
+        //
+        // make sure the port is within the 1 - 65535 range.
+        if (conn_info.servport < SERVPORT_MIN) || (conn_info.servport > SERVPORT_MAX) {
+            return Err(ERR_PORT_RANGE.into());
+        }
+
+        let target: String = format!("{}:{}", addr, conn_info.servport);
+
+        match TcpStream::connect(target) {
+            Ok(conn) => connection = conn,
+            Err(e) => return Err(e.into()),
+        }
+
+        // set timeouts for read and write.
+        //
+        // reference: https://www.reddit.com/r/rust/comments/tjg3bp/tcp_streamread_but_give_up_after_some_seconds/
+        _ = connection.set_read_timeout(self.read_timeout);
+        _ = connection.set_write_timeout(self.send_timeout);
+
+        return Ok(connection);
+    }
 
     /// function designed to receive data from the rawdog
     /// server and return the metadata and payload.
-    pub fn recv(
+    fn recv(&self, mut conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
+        let md_size: u16;
+        let data_size: u64;
+
+        let mut size_buffer: [u8; SIZE_CHUNK] = [0; SIZE_CHUNK];
+
+        let md_info: Vec<u8>;
+        let payload_info: Vec<u8>;
+
+        let md: TcpHeader;
+        let payload: TcpStatusMessage;
+
+        // block designed to receive all bytes from the server and
+        // save them in Vec<u8> variables for further processing.
+        match conn.read_exact(&mut size_buffer) {
+            Err(e) => return Err(e.into()),
+            _ => {}
+        }
+
+        // extract the metadata and data sizes from the size_buffer bytes.
+        match self.process_size_bytes(size_buffer) {
+            Ok((md_size_resp, data_size_resp)) => {
+                (md_size, data_size) = (md_size_resp, data_size_resp)
+            }
+            Err(e) => return Err(e),
+        }
+
+        // read the data transmitted by from the server.
+        match self.read_payload_bytes(conn, md_size, data_size) {
+            Ok((md_resp, data_resp)) => (md_info, payload_info) = (md_resp, data_resp),
+            Err(e) => return Err(e),
+        }
+
+        // process the data received from the server.
+        match self.process_response_bytes(md_info, payload_info) {
+            Ok((headers, data)) => (md, payload) = (headers, data),
+            Err(e) => return Err(e),
+        }
+
+        // if an error code has been returned by the server, raise an error.
+        if payload.is_error() {
+            return Err(payload.message.into());
+        }
+
+        return Ok((md, payload.message));
+    }
+
+    /// function designed to connect to the rawdog server
+    /// and transmit a message and metadata.
+    ///
+    /// if everything goes as expected, this will return the
+    /// server's response to the client's transmission; otherwise
+    /// it will return an error.
+    fn send(
         &self,
-        mut conn: TcpStream,
+        conn_info: TcpConnInfo,
+        metadata: TcpHeader,
+        message: String,
+    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
+        let mut connection: TcpStream;
+
+        let metadata_str: String;
+        let payload_enc: String = base64::engine::general_purpose::STANDARD.encode(message);
+
+        // attempt to connect to the rawdog server the paylod
+        // will be transmitted to.
+        match <RawdogClient as RawdogTcpClient>::connect(self, conn_info) {
+            Ok(conn) => connection = conn,
+            Err(e) => return Err(format!("ERROR connecting to server - {:#?}", e).into()),
+        }
+
+        // JSON serialize the metadata passed in.
+        match serde_json::to_string(&metadata) {
+            Ok(serialized) => metadata_str = serialized,
+            Err(e) => return Err(format!("ERROR serializing metadata: {:?}", e).into()),
+        }
+
+        // get the metadata length and convert it to the
+        // BigEndian byte representation.
+        let len_md: u16 = metadata_str.len() as u16;
+        let md_size_bytes: [u8; SIZE_MD] = len_md.to_be_bytes();
+
+        // get the message length and convert it to the
+        // BigEndian byte representation.
+        let len_data: u64 = payload_enc.len() as u64;
+        let data_size_bytes: [u8; SIZE_DATA] = len_data.to_be_bytes();
+
+        // write metadata to the wire.
+        match connection.write_all(&md_size_bytes) {
+            Ok(_) => {}
+            Err(e) => return Err(format!("ERROR transmitting metadata size: {:?}", e).into()),
+        };
+
+        // write payload size to the wire.
+        match connection.write_all(&data_size_bytes) {
+            Ok(_) => {}
+            Err(e) => return Err(format!("ERROR transmitting data size: {:?}", e).into()),
+        }
+
+        // transmit metadata chunk.
+        match connection.write_all(metadata_str.as_bytes()) {
+            Ok(_) => {}
+            Err(e) => return Err(format!("ERROR transmitting metadata: {:?}", e).into()),
+        }
+
+        // transmit main payload.
+        match connection.write_all(payload_enc.as_bytes()) {
+            Ok(_) => {}
+            Err(e) => return Err(format!("ERROR transmitting payload: {:?}", e).into()),
+        }
+
+        // read and return the response from the server.
+        return <RawdogClient as RawdogTcpClient>::recv(self, connection);
+    }
+}
+
+#[cfg(unix)]
+impl RawdogUnixClient for RawdogClient {
+    /// helper function designed to connect to the server and
+    /// return the connection object. if this fails, an error
+    /// will be returned.
+    fn connect(&self, conn_info: UnixConnInfo) -> Result<UnixStream, Box<dyn std::error::Error>> {
+        let connection: UnixStream;
+
+        match UnixStream::connect(conn_info.sockaddr) {
+            Ok(conn) => connection = conn,
+            Err(e) => return Err(e.into()),
+        }
+
+        // set timeouts for read and write.
+        //
+        // reference: https://www.reddit.com/r/rust/comments/tjg3bp/tcp_streamread_but_give_up_after_some_seconds/
+        _ = connection.set_read_timeout(self.read_timeout);
+        _ = connection.set_write_timeout(self.send_timeout);
+
+        return Ok(connection);
+    }
+
+    /// function designed to receive data from the rawdog
+    /// server and return the metadata and payload.
+    fn recv(
+        &self,
+        mut conn: UnixStream,
     ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
         let md_size: u16;
         let data_size: u64;
@@ -299,34 +497,26 @@ impl RawdogClient {
         return Ok((md, payload.message));
     }
 
-    /// async version of the recv function. this is a wrapper
-    /// around the synchronous recv function.
-    pub async fn recv_async(
-        &self,
-        conn: TcpStream,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        self.recv(conn)
-    }
-
     /// function designed to connect to the rawdog server
     /// and transmit a message and metadata.
     ///
     /// if everything goes as expected, this will return the
     /// server's response to the client's transmission; otherwise
     /// it will return an error.
-    pub fn send(
+    fn send(
         &self,
+        conn_info: UnixConnInfo,
         metadata: TcpHeader,
         message: String,
     ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        let mut connection: TcpStream;
+        let mut connection: UnixStream;
 
         let metadata_str: String;
         let payload_enc: String = base64::engine::general_purpose::STANDARD.encode(message);
 
         // attempt to connect to the rawdog server the paylod
         // will be transmitted to.
-        match self.connect() {
+        match <RawdogClient as RawdogUnixClient>::connect(self, conn_info) {
             Ok(conn) => connection = conn,
             Err(e) => return Err(format!("ERROR connecting to server - {:#?}", e).into()),
         }
@@ -372,16 +562,6 @@ impl RawdogClient {
         }
 
         // read and return the response from the server.
-        return self.recv(connection);
-    }
-
-    /// async version of the send func. this is a wrapper
-    /// around the synchronous send function.
-    pub async fn send_async(
-        &self,
-        metadata: TcpHeader,
-        message: String,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        self.send(metadata, message)
+        return <RawdogClient as RawdogUnixClient>::recv(self, connection);
     }
 }
