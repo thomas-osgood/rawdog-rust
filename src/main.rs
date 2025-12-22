@@ -1,8 +1,6 @@
 use std::fs;
 
-use crate::client::client::{RawdogTcpClient, TcpConnInfo};
-
-use crate::client::models::TcpHeader;
+use crate::client::client::RawdogTcpClient;
 
 mod client;
 
@@ -10,9 +8,9 @@ fn main() {
     let test_client: client::client::RawdogClient = client::client::RawdogClient::default();
     println!("{:?}", test_client);
 
-    let conn_info: TcpConnInfo = TcpConnInfo::default();
+    let conn_info: client::client::TcpConnInfo = client::client::TcpConnInfo::default();
 
-    let md: TcpHeader = TcpHeader {
+    let md: client::models::TcpHeader = client::models::TcpHeader {
         endpoint: 1,
         agentname: "test agent".to_string(),
         addldata: String::default(),
