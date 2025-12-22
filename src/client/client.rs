@@ -28,18 +28,6 @@ const SIZE_MD: usize = 2;
 const TIMEOUT_READ_DEFAULT: u64 = 10;
 const TIMEOUT_SEND_DEFAULT: u64 = 10;
 
-/// enum defining the connection information that
-/// can be passed to the RawdogClient.
-///
-/// this is based on whether the client is targeting
-/// a Tcp client or Unix client.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ConnInfo {
-    Tcp(TcpConnInfo),
-    #[cfg(unix)]
-    Unix(UnixConnInfo),
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct TcpConnInfo {
     /// address (ip or domain) of the Rawdog server the client
