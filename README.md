@@ -29,7 +29,7 @@ pub trait RawdogUnixClient {
 ```rust
 fn process_response_bytes(&self, md_buff: Vec<u8>, data_buff: Vec<u8>) -> Result<(TcpHeader, TcpStatusMessage), Box<dyn std::error::Error>>
 fn process_size_bytes(&self, size_buffer: [u8; SIZE_CHUNK]) -> Result<(u16, u64), Box<dyn std::error::Error>>
-fn read_paylfn read_payload_bytes<T: Read>(&self, mut conn: T, md_size: u16, data_size: u64) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>>
+fn read_payload_bytes<T: Read>(&self, mut conn: T, md_size: u16, data_size: u64) -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>>
 ```
 
 ### Helper Structs
