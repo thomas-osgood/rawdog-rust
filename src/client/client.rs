@@ -88,17 +88,7 @@ impl Default for UnixConnInfo {
 pub trait RawdogTcpClient {
     fn connect(&self, conn_info: TcpConnInfo) -> Result<TcpStream, Box<dyn std::error::Error>>;
     fn recv(&self, conn: TcpStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
-    async fn recv_async(
-        &self,
-        conn: TcpStream,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
     fn send(
-        &self,
-        conn_info: TcpConnInfo,
-        metadata: TcpHeader,
-        message: String,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
-    async fn send_async(
         &self,
         conn_info: TcpConnInfo,
         metadata: TcpHeader,
@@ -110,17 +100,7 @@ pub trait RawdogTcpClient {
 pub trait RawdogUnixClient {
     fn connect(&self, conn_info: UnixConnInfo) -> Result<UnixStream, Box<dyn std::error::Error>>;
     fn recv(&self, conn: UnixStream) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
-    async fn recv_async(
-        &self,
-        conn: UnixStream,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
     fn send(
-        &self,
-        conn_info: UnixConnInfo,
-        metadata: TcpHeader,
-        message: String,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>>;
-    async fn send_async(
         &self,
         conn_info: UnixConnInfo,
         metadata: TcpHeader,
@@ -386,15 +366,6 @@ impl RawdogTcpClient for RawdogClient {
         return Ok((md, payload.message));
     }
 
-    /// async version of the recv function. this is a wrapper
-    /// around the synchronous recv function.
-    async fn recv_async(
-        &self,
-        conn: TcpStream,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        <RawdogClient as RawdogTcpClient>::recv(self, conn)
-    }
-
     /// function designed to connect to the rawdog server
     /// and transmit a message and metadata.
     ///
@@ -461,17 +432,6 @@ impl RawdogTcpClient for RawdogClient {
 
         // read and return the response from the server.
         return <RawdogClient as RawdogTcpClient>::recv(self, connection);
-    }
-
-    /// async version of the send func. this is a wrapper
-    /// around the synchronous send function.
-    async fn send_async(
-        &self,
-        conn_info: TcpConnInfo,
-        metadata: TcpHeader,
-        message: String,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        <RawdogClient as RawdogTcpClient>::send(self, conn_info, metadata, message)
     }
 }
 
@@ -549,15 +509,6 @@ impl RawdogUnixClient for RawdogClient {
         return Ok((md, payload.message));
     }
 
-    /// async version of the recv function. this is a wrapper
-    /// around the synchronous recv function.
-    async fn recv_async(
-        &self,
-        conn: UnixStream,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        <RawdogClient as RawdogUnixClient>::recv(self, conn)
-    }
-
     /// function designed to connect to the rawdog server
     /// and transmit a message and metadata.
     ///
@@ -624,16 +575,5 @@ impl RawdogUnixClient for RawdogClient {
 
         // read and return the response from the server.
         return <RawdogClient as RawdogUnixClient>::recv(self, connection);
-    }
-
-    /// async version of the send func. this is a wrapper
-    /// around the synchronous send function.
-    async fn send_async(
-        &self,
-        conn_info: UnixConnInfo,
-        metadata: TcpHeader,
-        message: String,
-    ) -> Result<(TcpHeader, String), Box<dyn std::error::Error>> {
-        <RawdogClient as RawdogUnixClient>::send(self, conn_info, metadata, message)
     }
 }
